@@ -1,0 +1,21 @@
+name: Build C3 Firmware
+on: [workflow_dispatch]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          target: esp32c3
+          path: '.'
+          command: |
+            cat main/boards/lichuang-c3-dev/sdkconfig.defaults >> sdkconfig.defaults 2>/dev/null || true
+            idf.py set-target esp32c3
+            idf.py build
+      - name: Upload firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: build/merged-binary.bin
