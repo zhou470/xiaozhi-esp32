@@ -1,21 +1,19 @@
-name: Build C3 Firmware
+name: Build Lichuang C3 Dev
 on: [workflow_dispatch]
 jobs:
   build:
     runs-on: ubuntu-latest
+    container: espressif/idf:v5.4
     steps:
       - uses: actions/checkout@v4
-      - name: Build
-        uses: espressif/esp-idf-ci-action@v1
+      - name: Build lichuang-c3-dev
+        run: |
+          idf.py set-target esp32c3
+          echo 'CONFIG_BOARD_TYPE_LICHUANG_DEV_C3=y' >> sdkconfig
+          echo 'CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y' >> sdkconfig
+          echo 'CONFIG_USE_ESP_WAKE_WORD=y' >> sdkconfig
+          idf.py build
+      - uses: actions/upload-artifact@v4
         with:
-          target: esp32c3
-          path: '.'
-          command: |
-            cat main/boards/lichuang-c3-dev/sdkconfig.defaults >> sdkconfig.defaults 2>/dev/null || true
-            idf.py set-target esp32c3
-            idf.py build
-      - name: Upload firmware
-        uses: actions/upload-artifact@v4
-        with:
-          name: firmware
+          name: lichuang-c3-dev-firmware
           path: build/merged-binary.bin
