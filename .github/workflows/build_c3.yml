@@ -24,8 +24,7 @@ jobs:
           EOF
           idf.py fullclean
           idf.py set-target esp32c3
-          rm -rf managed_components/78__xiaozhi-fonts/src/*.c
-          echo 'void unused(void){}' > managed_components/78__xiaozhi-fonts/src/dummy.c
+          echo 'idf_component_register()' > managed_components/78__xiaozhi-fonts/CMakeLists.txt
           idf.py build
           idf.py merge-bin
       - uses: actions/upload-artifact@v4
