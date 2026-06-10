@@ -13,6 +13,7 @@ jobs:
       - name: Build
         run: |
           . /opt/esp/idf/export.sh
+          echo 'CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y' >> sdkconfig.defaults
           idf.py set-target esp32c3
           idf.py build
           idf.py merge-bin
