@@ -13,11 +13,14 @@ jobs:
       - name: Build
         run: |
           . /opt/esp/idf/export.sh
-          echo 'CONFIG_BOARD_TYPE_LICHUANG_DEV_C3=y' >> sdkconfig.defaults
-          echo 'CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y' >> sdkconfig.defaults
-          echo 'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions/v2/4m.csv"' >> sdkconfig.defaults
-          echo 'CONFIG_USE_ESP_WAKE_WORD=y' >> sdkconfig.defaults
-          echo 'CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y' >> sdkconfig.defaults
+          cat > sdkconfig.defaults << 'EOF'
+          CONFIG_BOARD_TYPE_LICHUANG_DEV_C3=y
+          CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+          CONFIG_ESPTOOLPY_FLASHMODE_DIO=y
+          CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions/v2/4m.csv"
+          CONFIG_USE_ESP_WAKE_WORD=y
+          CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+          EOF
           idf.py set-target esp32c3
           idf.py build
           idf.py merge-bin
