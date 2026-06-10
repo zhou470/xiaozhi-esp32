@@ -21,6 +21,7 @@ jobs:
           CONFIG_USE_ESP_WAKE_WORD=y
           CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
           EOF
+          idf.py fullclean
           idf.py set-target esp32c3
           idf.py build
           idf.py merge-bin
