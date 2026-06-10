@@ -24,7 +24,10 @@ jobs:
           EOF
           idf.py fullclean
           idf.py set-target esp32c3
-          sed -i 's/lv_imgfont_create/lv_binfont_create/g' managed_components/78__xiaozhi-fonts/src/font_emoji_*.c 2>/dev/null || true
+          echo '#include "lvgl.h"' > managed_components/78__xiaozhi-fonts/src/font_emoji_32.c
+          echo 'void font_emoji_32_init(void){}' >> managed_components/78__xiaozhi-fonts/src/font_emoji_32.c
+          echo '#include "lvgl.h"' > managed_components/78__xiaozhi-fonts/src/font_emoji_64.c
+          echo 'void font_emoji_64_init(void){}' >> managed_components/78__xiaozhi-fonts/src/font_emoji_64.c
           idf.py build
           idf.py merge-bin
       - uses: actions/upload-artifact@v4
