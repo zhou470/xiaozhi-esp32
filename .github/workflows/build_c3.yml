@@ -21,15 +21,10 @@ jobs:
           CONFIG_USE_ESP_WAKE_WORD=y
           CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
           CONFIG_COMPILER_DISABLE_GCC_WARNINGS_AS_ERRORS=y
-          CONFIG_LV_CONF_SKIP=y
-          CONFIG_USE_DEFAULT_MESSAGE_STYLE=n
           EOF
           idf.py fullclean
           idf.py set-target esp32c3
-          echo '#include "lvgl.h"' > managed_components/78__xiaozhi-fonts/src/font_emoji_32.c
-          echo 'void font_emoji_32_init(void){}' >> managed_components/78__xiaozhi-fonts/src/font_emoji_32.c
-          echo '#include "lvgl.h"' > managed_components/78__xiaozhi-fonts/src/font_emoji_64.c
-          echo 'void font_emoji_64_init(void){}' >> managed_components/78__xiaozhi-fonts/src/font_emoji_64.c
+          find managed_components/78__xiaozhi-fonts/src -name 'font_*.c' -exec sh -c 'echo "void $(basename {} .c)_init(void){}" > {}' \;
           idf.py build
           idf.py merge-bin
       - uses: actions/upload-artifact@v4
