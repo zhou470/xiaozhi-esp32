@@ -5,12 +5,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: espressif/esp-idf-ci-action@v1
-        with:
-          esp_idf_version: v5.5.2
-          target: esp32c3
-          command: |
-            idf.py build
+      - name: Setup ESP-IDF
+        run: |
+          git clone --depth 1 --branch v5.5.2 https://github.com/espressif/esp-idf.git /opt/esp/idf
+          cd /opt/esp/idf
+          ./install.sh esp32c3
+      - name: Build
+        run: |
+          . /opt/esp/idf/export.sh
+          idf.py set-target esp32c3
+          idf.py build
       - uses: actions/upload-artifact@v4
         with:
           name: firmware
