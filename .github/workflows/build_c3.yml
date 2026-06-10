@@ -10,9 +10,6 @@ jobs:
           git clone --depth 1 --branch v5.5.2 https://github.com/espressif/esp-idf.git /opt/esp/idf
           cd /opt/esp/idf
           ./install.sh esp32c3
-      - name: Fix LVGL compat
-        run: |
-          find managed_components -name 'font_emoji_*.c' -exec sed -i 's/lv_imgfont_create/lv_binfont_create/g' {} \;
       - name: Build
         run: |
           . /opt/esp/idf/export.sh
@@ -27,6 +24,7 @@ jobs:
           EOF
           idf.py fullclean
           idf.py set-target esp32c3
+          sed -i 's/lv_imgfont_create/lv_binfont_create/g' managed_components/78__xiaozhi-fonts/src/font_emoji_*.c 2>/dev/null || true
           idf.py build
           idf.py merge-bin
       - uses: actions/upload-artifact@v4
