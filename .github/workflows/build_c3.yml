@@ -12,11 +12,16 @@ jobs:
 
       - name: Build
         run: |
-          . /opt/esp/idf/export.sh
+          . /opt/esp/idf/export.sh || true
+          idf.py --version
+          echo "=== IDF PATH ==="
+          echo $IDF_PATH
+
           cat > sdkconfig.defaults << 'EOF'
           CONFIG_BOARD_TYPE_LICHUANG_DEV_C3=y
           CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
           CONFIG_ESPTOOLPY_FLASHMODE_DIO=y
+          CONFIG_PARTITION_TABLE_CUSTOM=y
           CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions/v2/4m.csv"
           CONFIG_USE_ESP_WAKE_WORD=y
           CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
@@ -24,16 +29,27 @@ jobs:
           CONFIG_COMPILER_CXX_EXCEPTIONS=y
           CONFIG_COMPILER_CXX_RTTI=y
           EOF
+
+          rm -rf build sdkconfig sdkconfig.old
           idf.py set-target esp32c3
+          idf.py reconfigure
+
+          echo "=== CHECK PARTITION ==="
+          idf.py partition-table || true
+
           for f in managed_components/78__xiaozhi-fonts/src/font_emoji_*.c; do
-            sed -i 's/^[[:space:]]*font = lv_imgfont_create.*/    font = NULL;/' "$f"
+            sed -i 's/.*lv_imgfont_create.*/    font = NULL;/' "$f"
           done
           for f in managed_components/78__xiaozhi-fonts/src/font_puhui_*.c; do
             sed -i '/^#[[:space:]]*error/d' "$f"
           done
+
           idf.py build
 
       - uses: actions/upload-artifact@v4
         with:
           name: firmware
-          path: build/*.bin
+          path: |
+            build/*.bin
+            build/*.elf
+            build/*.map
