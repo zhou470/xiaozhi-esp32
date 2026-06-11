@@ -1,22 +1,19 @@
 name: Build C3
+
 on: workflow_dispatch
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Setup ESP-IDF
         run: |
           git clone --depth 1 --branch v5.5.2 https://github.com/espressif/esp-idf.git /opt/esp/idf
           cd /opt/esp/idf
           ./install.sh esp32c3
-      - name: Patch fonts
-        run: |
-          cd /home/runner/work/xiaozhi-esp32/xiaozhi-esp32
-          idf.py set-target esp32c3
-          find main/display -type f | xargs sed -i '/font_emoji\|font_awesome\|font_puhui\|font_noto\|cbin_font/d'
-          sed -i 's/lv_imgfont_create/lv_binfont_create/g' managed_components/78__xiaozhi-fonts/src/font_emoji_*.c
-          sed -i '/^#error/d' managed_components/78__xiaozhi-fonts/src/font_puhui_*.c
+
       - name: Build
         run: |
           . /opt/esp/idf/export.sh
@@ -27,16 +24,13 @@ jobs:
           CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions/v2/4m.csv"
           CONFIG_USE_ESP_WAKE_WORD=y
           CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+          CONFIG_USE_EMOTE_MESSAGE_STYLE=y
           EOF
           idf.py fullclean
           idf.py set-target esp32c3
           idf.py build
-          idf.py merge-bin
+
       - uses: actions/upload-artifact@v4
         with:
           name: firmware
-          path: |
-            build/merged-binary.bin
-            build/bootloader/bootloader.bin
-            build/partition_table/partition-table.bin
-            build/*.bin
+          path: build/*.bin
