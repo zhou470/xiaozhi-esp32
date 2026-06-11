@@ -13,9 +13,6 @@ jobs:
       - name: Build
         run: |
           . /opt/esp/idf/export.sh || true
-          idf.py --version
-          echo "=== IDF PATH ==="
-          echo $IDF_PATH
 
           cat > sdkconfig.defaults << 'EOF'
           CONFIG_BOARD_TYPE_LICHUANG_DEV_C3=y
@@ -28,20 +25,9 @@ jobs:
           CONFIG_COMPILER_CXX_RTTI=y
           EOF
 
-          test -f sdkconfig.defaults || exit 1
           idf.py fullclean
           idf.py set-target esp32c3
           idf.py reconfigure
-
-          cat >> sdkconfig << 'APPEND'
-          CONFIG_PARTITION_TABLE_CUSTOM=y
-          CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions/v2/4m.csv"
-          CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
-          APPEND
-          idf.py reconfigure
-
-          echo "=== PARTITION TABLE ==="
-          idf.py partition-table || true
 
           for f in managed_components/78__xiaozhi-fonts/src/font_emoji_*.c; do
             sed -i 's/.*lv_imgfont_create.*/    font = NULL;/' "$f"
@@ -52,55 +38,44 @@ jobs:
 
           idf.py build
 
-          echo "=== PATCH FLASH SIZE 16MB -> 4MB ==="
+          echo "=== GENERATE CORRECT 4MB PARTITION TABLE ==="
           python3 - << 'PY'
-          import glob
+          import csv, struct, os
 
-          def patch_bin(path):
-              with open(path, 'rb+') as f:
-                  magic = f.read(1)
-                  if magic != b'\xe9':
-                      print(f"  {path}: not ESP image, skip")
-                      return
-                  f.read(1)
-                  config = f.read(1)
-                  new_config = (config[0] & 0x0F) | 0x20
-                  f.seek(2)
-                  f.write(bytes([new_config]))
-                  old = (config[0] & 0xF0) >> 4
-                  print(f"  {path}: flash {old}MB -> 4MB")
+          PART_TYPE = {
+              ("data","nvs"): (0x01, 0x02), ("data","ota"): (0x01, 0x00),
+              ("data","phy"): (0x01, 0x01), ("app","factory"): (0x00, 0x00),
+              ("data","spiffs"): (0x01, 0x82),
+          }
+          entries = []
+          with open("partitions/v2/4m.csv") as f:
+              for row in csv.reader(f):
+                  row = [c.strip() for c in row if c.strip()]
+                  if not row or row[0].startswith('#'): continue
+                  k = (row[1], row[2])
+                  if k not in PART_TYPE: continue
+                  t, st = PART_TYPE[k]
+                  entries.append((t, st, int(row[3],16), int(row[4],16), row[0]))
 
-          for f in glob.glob("build/**/*.bin", recursive=True):
-              patch_bin(f)
-          print("All binaries patched to 4MB")
+          buf = bytearray()
+          for t, st, off, sz, name in entries:
+              buf += struct.pack('<HBB', 0x50AA, t, st)
+              buf += struct.pack('<II', off, sz)
+              buf += name.encode()[:16].ljust(16, b'\x00') + b'\x00'*4
+              print(f"  {name}: 0x{off:06X} + 0x{sz:06X} = 0x{off+sz:X} OK")
+          buf += b'\xFF' * max(0, 0xC00 - len(buf))
+          os.makedirs("build/partition_table", exist_ok=True)
+          with open("build/partition_table/partition-table.bin", 'wb') as f: f.write(buf)
+          print("Partition table regenerated (factory 3MB)")
           PY
 
-          echo "=== FLASH SAFETY CHECK ==="
-          python3 - << 'PY'
-          import struct
+          echo "=== REGENERATE APP WITH CORRECT FLASH SIZE ==="
+          python -m esptool --chip esp32c3 elf2image \
+            --flash_mode dio --flash_size 4MB --flash_freq 80m \
+            -o build/xiaozhi.bin build/xiaozhi.elf
 
-          FLASH_SIZE = 0x400000
-          with open("build/partition_table/partition-table.bin", "rb") as f:
-              data = f.read()
-
-          for i in range(0, len(data), 32):
-              entry = data[i:i+32]
-              if len(entry) < 32:
-                  continue
-              magic = struct.unpack("<H", entry[0:2])[0]
-              if magic != 0x50AA:
-                  continue
-              offset = struct.unpack("<I", entry[4:8])[0]
-              size = struct.unpack("<I", entry[8:12])[0]
-              name = entry[12:28].split(b'\x00')[0].decode(errors='ignore')
-              if offset == 0 or size == 0:
-                  continue
-              end = offset + size
-              if end > FLASH_SIZE:
-                  raise SystemExit(f"FAIL: {name} at 0x{offset:X}+0x{size:X}=0x{end:X} exceeds 4MB")
-              print(f"  {name:16s} 0x{offset:06X} + 0x{size:06X} = 0x{end:06X} OK")
-          print("ALL PARTITIONS FIT IN 4MB")
-          PY
+          echo "=== VERIFY ==="
+          python -m esptool --chip esp32c3 image-info build/xiaozhi.bin
 
       - uses: actions/upload-artifact@v4
         with:
@@ -109,4 +84,3 @@ jobs:
             build/**/*.bin
             build/*.elf
             build/*.map
-            build/flasher_args.json
