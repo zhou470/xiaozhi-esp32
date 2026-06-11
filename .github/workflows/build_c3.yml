@@ -37,9 +37,13 @@ jobs:
           idf.py set-target esp32c3
           idf.py reconfigure
 
-          echo "===SDKCONFIG==="
-          cat sdkconfig
-          echo "===ENDSDKCONFIG==="
+          # Force 4MB + custom partition after Kconfig
+          sed -i 's/^CONFIG_ESPTOOLPY_FLASHSIZE=.*/CONFIG_ESPTOOLPY_FLASHSIZE="4MB"/' sdkconfig
+          sed -i 's/^CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y/## OVERRIDDEN_BY_4MB ##/' sdkconfig
+          idf.py reconfigure
+
+          echo "=== FLASH CHECK ==="
+          grep "^CONFIG_ESPTOOLPY_FLASHSIZE=" sdkconfig
 
           echo "=== PARTITION TABLE ==="
           idf.py partition-table || true
