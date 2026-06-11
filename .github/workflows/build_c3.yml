@@ -28,7 +28,10 @@ jobs:
           EOF
           idf.py fullclean
           idf.py set-target esp32c3
-          sed -i 's/lv_imgfont_create/lv_binfont_create/g' managed_components/78__xiaozhi-fonts/src/font_emoji_*.c
+          for f in managed_components/78__xiaozhi-fonts/src/font_emoji_*.c managed_components/78__xiaozhi-fonts/src/font_puhui_*.c; do
+            name=$(basename "$f" .c)
+            printf '#include <lvgl.h>\nlv_font_t* %s_init(void) { return NULL; }\n' "$name" > "$f"
+          done
           idf.py build
 
       - uses: actions/upload-artifact@v4
