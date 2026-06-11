@@ -29,6 +29,11 @@ jobs:
           idf.py set-target esp32c3
           idf.py reconfigure
 
+          sed -i 's/^CONFIG_ESPTOOLPY_FLASHSIZE=.*/CONFIG_ESPTOOLPY_FLASHSIZE="4MB"/' sdkconfig
+          sed -i 's/^CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y/CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y/' sdkconfig
+          grep "^CONFIG_ESPTOOLPY_FLASHSIZE" sdkconfig
+          idf.py reconfigure
+
           for f in managed_components/78__xiaozhi-fonts/src/font_emoji_*.c; do
             sed -i 's/.*lv_imgfont_create.*/    font = NULL;/' "$f"
           done
