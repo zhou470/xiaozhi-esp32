@@ -5,18 +5,13 @@ on: workflow_dispatch
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: espressif/idf:v5.5.2
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup ESP-IDF
-        run: |
-          git clone --depth 1 --branch v5.5.2 https://github.com/espressif/esp-idf.git /opt/esp/idf
-          cd /opt/esp/idf
-          ./install.sh esp32c3
-
       - name: Build
         run: |
-          . /opt/esp/idf/export.sh
           cat > sdkconfig.defaults << 'EOF'
           CONFIG_BOARD_TYPE_LICHUANG_DEV_C3=y
           CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
@@ -28,13 +23,12 @@ jobs:
           CONFIG_COMPILER_CXX_EXCEPTIONS=y
           CONFIG_COMPILER_CXX_RTTI=y
           EOF
-          idf.py fullclean
           idf.py set-target esp32c3
           for f in managed_components/78__xiaozhi-fonts/src/font_emoji_*.c; do
             sed -i 's/^[[:space:]]*font = lv_imgfont_create.*/    font = NULL;/' "$f"
           done
           for f in managed_components/78__xiaozhi-fonts/src/font_puhui_*.c; do
-            sed -i '/^#error/d' "$f"
+            sed -i '/^#[[:space:]]*error/d' "$f"
           done
           idf.py build
 
