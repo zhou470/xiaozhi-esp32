@@ -10,6 +10,13 @@ jobs:
           git clone --depth 1 --branch v5.5.2 https://github.com/espressif/esp-idf.git /opt/esp/idf
           cd /opt/esp/idf
           ./install.sh esp32c3
+      - name: Patch fonts
+        run: |
+          cd /home/runner/work/xiaozhi-esp32/xiaozhi-esp32
+          idf.py set-target esp32c3
+          find main/display -type f | xargs sed -i '/font_emoji\|font_awesome\|font_puhui\|font_noto\|cbin_font/d'
+          sed -i 's/lv_imgfont_create/lv_binfont_create/g' managed_components/78__xiaozhi-fonts/src/font_emoji_*.c
+          sed -i '/^#error/d' managed_components/78__xiaozhi-fonts/src/font_puhui_*.c
       - name: Build
         run: |
           . /opt/esp/idf/export.sh
@@ -23,18 +30,6 @@ jobs:
           EOF
           idf.py fullclean
           idf.py set-target esp32c3
-          python3 -c "
-import os,re,glob
-for f in glob.glob('main/display/*.*')+glob.glob('main/display/**/*.*',recursive=True):
-    c=open(f).read()
-    c=re.sub(r'#include\s*<font_\w+\.h>\s*\n','',c)
-    open(f,'w').write(c)
-for f in glob.glob('managed_components/78__xiaozhi-fonts/src/*.c'):
-    c=open(f).read()
-    c=c.replace('lv_imgfont_create','lv_binfont_create')
-    c=re.sub(r'#\s*error.*\n','',c)
-    open(f,'w').write(c)
-"
           idf.py build
           idf.py merge-bin
       - uses: actions/upload-artifact@v4
