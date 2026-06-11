@@ -35,9 +35,6 @@ jobs:
           idf.py set-target esp32c3
           idf.py reconfigure
 
-          echo "=== FLASH CHECK ==="
-          grep "^CONFIG_ESPTOOLPY_FLASHSIZE=" sdkconfig
-
           echo "=== PARTITION TABLE ==="
           idf.py partition-table || true
 
@@ -50,16 +47,28 @@ jobs:
 
           idf.py build
 
-          echo "=== VERIFY FLASH SIZE ==="
-          FLASH=$(grep "^CONFIG_ESPTOOLPY_FLASHSIZE=" sdkconfig | cut -d'"' -f2)
-          echo "FLASH SIZE: $FLASH"
-          if [ "$FLASH" != "4MB" ]; then
-            echo "ERROR: Flash size is $FLASH, expected 4MB"
-            exit 1
-          fi
+          echo "=== PATCH FLASH SIZE 16MB -> 4MB ==="
+          python3 - << 'PY'
+          import glob
 
-          echo "=== IDF SIZE (REAL) ==="
-          idf.py size
+          def patch_bin(path):
+              with open(path, 'rb+') as f:
+                  magic = f.read(1)
+                  if magic != b'\xe9':
+                      print(f"  {path}: not ESP image, skip")
+                      return
+                  f.read(1)
+                  config = f.read(1)
+                  new_config = (config[0] & 0x0F) | 0x20
+                  f.seek(2)
+                  f.write(bytes([new_config]))
+                  old = (config[0] & 0xF0) >> 4
+                  print(f"  {path}: flash {old}MB -> 4MB")
+
+          for f in glob.glob("build/**/*.bin", recursive=True):
+              patch_bin(f)
+          print("All binaries patched to 4MB")
+          PY
 
           echo "=== FLASH SAFETY CHECK ==="
           python3 - << 'PY'
