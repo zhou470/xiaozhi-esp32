@@ -10,15 +10,6 @@ jobs:
           git clone --depth 1 --branch v5.5.2 https://github.com/espressif/esp-idf.git /opt/esp/idf
           cd /opt/esp/idf
           ./install.sh esp32c3
-      - name: Fix display deps
-        run: |
-          FONTS=managed_components/78__xiaozhi-fonts
-          echo 'idf_component_register()' > $FONTS/CMakeLists.txt
-          mkdir -p $FONTS/include $FONTS/src
-          for h in font_emoji font_awesome cbin_font font_puhui_14_1 font_puhui_16_4 font_puhui_20_4 font_puhui_30_4 font_puhui_basic_14_1 font_puhui_basic_16_4 font_puhui_basic_20_4 font_noto_basic_14_1 font_noto_basic_16_4; do
-            echo "#pragma once" > $FONTS/include/${h}.h
-          done
-          echo 'void unused(void){}' > $FONTS/src/dummy.c
       - name: Build
         run: |
           . /opt/esp/idf/export.sh
@@ -32,6 +23,13 @@ jobs:
           EOF
           idf.py fullclean
           idf.py set-target esp32c3
+          FONTS=managed_components/78__xiaozhi-fonts
+          mkdir -p $FONTS/include $FONTS/src
+          echo 'idf_component_register()' > $FONTS/CMakeLists.txt
+          for h in font_emoji font_awesome cbin_font font_puhui_14_1 font_puhui_16_4 font_puhui_20_4 font_puhui_30_4 font_puhui_basic_14_1 font_puhui_basic_16_4 font_puhui_basic_20_4 font_noto_basic_14_1 font_noto_basic_16_4; do
+            echo "#pragma once" > $FONTS/include/${h}.h
+          done
+          echo 'void unused(void){}' > $FONTS/src/dummy.c
           idf.py build
           idf.py merge-bin
       - uses: actions/upload-artifact@v4
