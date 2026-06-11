@@ -12,6 +12,7 @@ jobs:
 
       - name: Build
         run: |
+          . /opt/esp/idf/export.sh
           cat > sdkconfig.defaults << 'EOF'
           CONFIG_BOARD_TYPE_LICHUANG_DEV_C3=y
           CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
