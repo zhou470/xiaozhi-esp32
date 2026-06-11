@@ -1,3 +1,5 @@
+$ Write-Host "最后版本："
+$yaml = @'
 name: Build C3
 on: workflow_dispatch
 jobs:
@@ -23,14 +25,69 @@ jobs:
           EOF
           idf.py fullclean
           idf.py set-target esp32c3
-          find main -name '*.h' -o -name '*.cc' | xargs sed -i '/font_emoji\|font_awesome\|font_puhui\|font_noto\|cbin_font/d' 2>/dev/null
           python3 -c "
-          import glob, re
-          for f in glob.glob('managed_components/78__xiaozhi-fonts/src/font_emoji_*.c'):
-              c = open(f).read()
-              c = re.sub(r'lv_imgfont_create\([^)]+\)', 'NULL', c)
-              open(f,'w').write(c)
-          "
+import os,re,glob
+for f in glob.glob('main/display/*.*')+glob.glob('main/display/**/*.*',recursive=True):
+    c=open(f).read()
+    c=re.sub(r'#include\s*<font_\w+\.h>\s*\n','',c)
+    open(f,'w').write(c)
+for f in glob.glob('managed_components/78__xiaozhi-fonts/src/*.c'):
+    c=open(f).read()
+    c=c.replace('lv_imgfont_create','lv_binfont_create')
+    c=re.sub(r'#\s*error.*\n','',c)
+    open(f,'w').write(c)
+"
+          idf.py build
+          idf.py merge-bin
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: |
+            build/merged-binary.bin
+            build/bootloader/bootloader.bin
+            build/partition_table/partition-table.bin
+            build/*.bin
+'@
+$yaml
+
+���汾��
+name: Build C3
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup ESP-IDF
+        run: |
+          git clone --depth 1 --branch v5.5.2 https://github.com/espressif/esp-idf.git /opt/esp/idf
+          cd /opt/esp/idf
+          ./install.sh esp32c3
+      - name: Build
+        run: |
+          . /opt/esp/idf/export.sh
+          cat > sdkconfig.defaults << 'EOF'
+          CONFIG_BOARD_TYPE_LICHUANG_DEV_C3=y
+          CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+          CONFIG_ESPTOOLPY_FLASHMODE_DIO=y
+          CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions/v2/4m.csv"
+          CONFIG_USE_ESP_WAKE_WORD=y
+          CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+          EOF
+          idf.py fullclean
+          idf.py set-target esp32c3
+          python3 -c "
+import os,re,glob
+for f in glob.glob('main/display/*.*')+glob.glob('main/display/**/*.*',recursive=True):
+    c=open(f).read()
+    c=re.sub(r'#include\s*<font_\w+\.h>\s*\n','',c)
+    open(f,'w').write(c)
+for f in glob.glob('managed_components/78__xiaozhi-fonts/src/*.c'):
+    c=open(f).read()
+    c=c.replace('lv_imgfont_create','lv_binfont_create')
+    c=re.sub(r'#\s*error.*\n','',c)
+    open(f,'w').write(c)
+"
           idf.py build
           idf.py merge-bin
       - uses: actions/upload-artifact@v4
