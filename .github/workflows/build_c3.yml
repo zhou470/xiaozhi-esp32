@@ -37,8 +37,9 @@ jobs:
           idf.py set-target esp32c3
           idf.py reconfigure
 
-          echo "=== VERIFY SDKCONFIG ==="
-          grep -E "FLASHSIZE|PARTITION_TABLE" sdkconfig
+          echo "===SDKCONFIG==="
+          cat sdkconfig
+          echo "===ENDSDKCONFIG==="
 
           echo "=== PARTITION TABLE ==="
           idf.py partition-table || true
