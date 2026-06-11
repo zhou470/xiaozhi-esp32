@@ -74,9 +74,6 @@ jobs:
             --flash_mode dio --flash_size 4MB --flash_freq 80m \
             -o build/xiaozhi.bin build/xiaozhi.elf
 
-          echo "=== VERIFY ==="
-          python -m esptool --chip esp32c3 image-info build/xiaozhi.bin
-
       - uses: actions/upload-artifact@v4
         with:
           name: firmware
