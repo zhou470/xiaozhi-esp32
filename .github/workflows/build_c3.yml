@@ -20,11 +20,7 @@ jobs:
           cat > sdkconfig.defaults << 'EOF'
           CONFIG_BOARD_TYPE_LICHUANG_DEV_C3=y
           CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
-          # CONFIG_ESPTOOLPY_FLASHSIZE_8MB is not set
-          # CONFIG_ESPTOOLPY_FLASHSIZE_16MB is not set
           CONFIG_ESPTOOLPY_FLASHMODE_DIO=y
-          CONFIG_PARTITION_TABLE_CUSTOM=y
-          CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions/v2/4m.csv"
           CONFIG_USE_ESP_WAKE_WORD=y
           CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
           CONFIG_USE_EMOTE_MESSAGE_STYLE=y
@@ -32,14 +28,11 @@ jobs:
           CONFIG_COMPILER_CXX_RTTI=y
           EOF
 
+          cp partitions/v2/4m.csv partitions.csv
+
           test -f sdkconfig.defaults || exit 1
           idf.py fullclean
           idf.py set-target esp32c3
-          idf.py reconfigure
-
-          # Force 4MB + custom partition after Kconfig
-          sed -i 's/^CONFIG_ESPTOOLPY_FLASHSIZE=.*/CONFIG_ESPTOOLPY_FLASHSIZE="4MB"/' sdkconfig
-          sed -i 's/^CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y/## OVERRIDDEN_BY_4MB ##/' sdkconfig
           idf.py reconfigure
 
           echo "=== FLASH CHECK ==="
