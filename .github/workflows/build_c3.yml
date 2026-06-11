@@ -1,78 +1,39 @@
-name: Build C3
+    done
 
-on: workflow_dispatch
+    idf.py build
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    container:
-      image: espressif/idf:v5.5.2
-    steps:
-      - uses: actions/checkout@v4
+    echo "=== FLASH SIZE CHECK ==="
+    cat build/flasher_args.json 2>/dev/null || true
+    echo "=== IDF SIZE (REAL) ==="
+    idf.py size
 
-      - name: Build
-        run: |
-          . /opt/esp/idf/export.sh || true
-          idf.py --version
+    echo "=== PARTITION CSV ==="
+    cat build/partition_table/partition-table.csv 2>/dev/null || true
 
-          echo "=== IDF PATH ==="
-          echo $IDF_PATH
+    echo "=== FLASH SAFETY CHECK ==="
+    python3 - << 'PY'
+    import os, json
+    try:
+      with open("build/flasher_args.json") as f:
+          data = json.load(f)
+      fs = data.get("flash_settings", {}).get("flash_size", "unknown")
+      if fs != "4MB":
+          raise SystemExit(f"FAIL: flash_size is {fs}, expected 4MB")
+    except Exception as e:
+      raise SystemExit(str(e))
+    print("FLASH SIZE OK:", fs)
+    import os, csv
+    # Verify partition table does not exceed 4MB
+    with open("build/partition_table/partition-table.csv") as f:
+        for row in csv.DictReader(f):
+            off = int(row["Offset"].strip(), 16)
+            size = int(row["Size"].strip(), 16)
+            end = off + size
+            if end > 0x400000:
+                raise SystemExit(f"FAIL: {row['Name']} at 0x{off:X}+0x{size:X} exceeds 4MB flash")
+            print(f"  {row['Name']:16s} 0x{off:06X} + 0x{size:06X} = 0x{end:06X} OK")
+    print("ALL PARTITIONS FIT IN 4MB")
+    PY
 
-          cat > sdkconfig.defaults << 'EOF'
-          CONFIG_BOARD_TYPE_LICHUANG_DEV_C3=y
-          CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
-          CONFIG_ESPTOOLPY_FLASHMODE_DIO=y
-          CONFIG_PARTITION_TABLE_CUSTOM=y
-          CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions/v2/4m.csv"
-          CONFIG_USE_ESP_WAKE_WORD=y
-          CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
-          CONFIG_USE_EMOTE_MESSAGE_STYLE=y
-          CONFIG_COMPILER_CXX_EXCEPTIONS=y
-          CONFIG_COMPILER_CXX_RTTI=y
-          EOF
-
-          rm -rf build sdkconfig sdkconfig.old
-          idf.py set-target esp32c3
-          idf.py reconfigure
-
-          echo "=== PARTITION TABLE ==="
-          idf.py partition-table || true
-
-          for f in managed_components/78__xiaozhi-fonts/src/font_emoji_*.c; do
-            sed -i 's/.*lv_imgfont_create.*/    font = NULL;/' "$f"
-          done
-          for f in managed_components/78__xiaozhi-fonts/src/font_puhui_*.c; do
-            sed -i '/^#[[:space:]]*error/d' "$f"
-          done
-
-          idf.py build
-
-          echo "=== FLASH SAFETY CHECK ==="
-          python3 - << 'PY'
-          import os
-
-          bin_path = "build"
-          total = 0
-
-          for root, _, files in os.walk(bin_path):
-              for f in files:
-                  if f.endswith(".bin"):
-                      size = os.path.getsize(os.path.join(root, f))
-                      print(f, size)
-                      total = max(total, size)
-
-          print("MAX BIN SIZE:", total)
-
-          if total > 3 * 1024 * 1024:
-              raise SystemExit("Firmware too large for safe OTA")
-          PY
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: firmware
-          path: |
-            build/*.bin
-            build/*.elf
-            build/*.map
-            build/partition_table/*
-            build/flasher_args.json
+- uses: actions/upload-artifact@v4
+  with:
