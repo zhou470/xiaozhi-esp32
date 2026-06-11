@@ -44,35 +44,8 @@ jobs:
           idf.py build || true
 
           echo "=== GENERATE CORRECT 4MB PARTITION TABLE ==="
-          python3 - << 'PY'
-          import csv, struct, os
-
-          PART_TYPE = {
-              ("data","nvs"): (0x01, 0x02), ("data","ota"): (0x01, 0x00),
-              ("data","phy"): (0x01, 0x01), ("app","factory"): (0x00, 0x00),
-              ("data","spiffs"): (0x01, 0x82),
-          }
-          entries = []
-          with open("partitions/v2/4m.csv") as f:
-              for row in csv.reader(f):
-                  row = [c.strip() for c in row if c.strip()]
-                  if not row or row[0].startswith('#'): continue
-                  k = (row[1], row[2])
-                  if k not in PART_TYPE: continue
-                  t, st = PART_TYPE[k]
-                  entries.append((t, st, int(row[3],16), int(row[4],16), row[0]))
-
-          buf = bytearray()
-          for t, st, off, sz, name in entries:
-              buf += struct.pack('<HBB', 0x50AA, t, st)
-              buf += struct.pack('<II', off, sz)
-              buf += name.encode()[:16].ljust(16, b'\x00') + b'\x00'*4
-              print(f"  {name}: 0x{off:06X} + 0x{sz:06X} = 0x{off+sz:X} OK")
-          buf += b'\xFF' * max(0, 0xC00 - len(buf))
-          os.makedirs("build/partition_table", exist_ok=True)
-          with open("build/partition_table/partition-table.bin", 'wb') as f: f.write(buf)
-          print("Partition table regenerated (factory 3MB)")
-          PY
+          python $IDF_PATH/components/partition_table/gen_esp32part.py \
+            partitions/v2/4m.csv build/partition_table/partition-table.bin
 
           echo "=== REGENERATE APP WITH CORRECT FLASH SIZE ==="
           python -m esptool --chip esp32c3 elf2image \
