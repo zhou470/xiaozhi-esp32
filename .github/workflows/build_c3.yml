@@ -23,13 +23,7 @@ jobs:
           EOF
           idf.py fullclean
           idf.py set-target esp32c3
-          FONTS=managed_components/78__xiaozhi-fonts
-          mkdir -p $FONTS/include $FONTS/src
-          echo 'idf_component_register()' > $FONTS/CMakeLists.txt
-          for h in font_emoji font_awesome cbin_font font_puhui_14_1 font_puhui_16_4 font_puhui_20_4 font_puhui_30_4 font_puhui_basic_14_1 font_puhui_basic_16_4 font_puhui_basic_20_4 font_noto_basic_14_1 font_noto_basic_16_4; do
-            echo "#pragma once" > $FONTS/include/${h}.h
-          done
-          echo 'void unused(void){}' > $FONTS/src/dummy.c
+          find main -name '*.h' -o -name '*.cc' | xargs sed -i '/font_emoji\|font_awesome\|font_puhui\|font_noto\|cbin_font/d'
           idf.py build
           idf.py merge-bin
       - uses: actions/upload-artifact@v4
