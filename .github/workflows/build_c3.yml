@@ -23,7 +23,14 @@ jobs:
           EOF
           idf.py fullclean
           idf.py set-target esp32c3
-          find main -name '*.h' -o -name '*.cc' | xargs sed -i '/font_emoji\|font_awesome\|font_puhui\|font_noto\|cbin_font/d'
+          find main -name '*.h' -o -name '*.cc' | xargs sed -i '/font_emoji\|font_awesome\|font_puhui\|font_noto\|cbin_font/d' 2>/dev/null
+          python3 -c "
+          import glob, re
+          for f in glob.glob('managed_components/78__xiaozhi-fonts/src/font_emoji_*.c'):
+              c = open(f).read()
+              c = re.sub(r'lv_imgfont_create\([^)]+\)', 'NULL', c)
+              open(f,'w').write(c)
+          "
           idf.py build
           idf.py merge-bin
       - uses: actions/upload-artifact@v4
