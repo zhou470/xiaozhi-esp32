@@ -14,13 +14,13 @@ jobs:
         run: |
           . /opt/esp/idf/export.sh || true
           idf.py --version
+          echo "=== IDF PATH ==="
+          echo $IDF_PATH
 
           cat > sdkconfig.defaults << 'EOF'
           CONFIG_BOARD_TYPE_LICHUANG_DEV_C3=y
           CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
           CONFIG_ESPTOOLPY_FLASHMODE_DIO=y
-          CONFIG_PARTITION_TABLE_TYPE_CUSTOM_APP=y
-          CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
           CONFIG_USE_ESP_WAKE_WORD=y
           CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
           CONFIG_USE_EMOTE_MESSAGE_STYLE=y
@@ -28,11 +28,16 @@ jobs:
           CONFIG_COMPILER_CXX_RTTI=y
           EOF
 
-          cp partitions/v2/4m.csv partitions.csv
-
           test -f sdkconfig.defaults || exit 1
           idf.py fullclean
           idf.py set-target esp32c3
+          idf.py reconfigure
+
+          cat >> sdkconfig << 'APPEND'
+          CONFIG_PARTITION_TABLE_CUSTOM=y
+          CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions/v2/4m.csv"
+          CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+          APPEND
           idf.py reconfigure
 
           echo "=== PARTITION TABLE ==="
@@ -68,6 +73,33 @@ jobs:
           for f in glob.glob("build/**/*.bin", recursive=True):
               patch_bin(f)
           print("All binaries patched to 4MB")
+          PY
+
+          echo "=== FLASH SAFETY CHECK ==="
+          python3 - << 'PY'
+          import struct
+
+          FLASH_SIZE = 0x400000
+          with open("build/partition_table/partition-table.bin", "rb") as f:
+              data = f.read()
+
+          for i in range(0, len(data), 32):
+              entry = data[i:i+32]
+              if len(entry) < 32:
+                  continue
+              magic = struct.unpack("<H", entry[0:2])[0]
+              if magic != 0x50AA:
+                  continue
+              offset = struct.unpack("<I", entry[4:8])[0]
+              size = struct.unpack("<I", entry[8:12])[0]
+              name = entry[12:28].split(b'\x00')[0].decode(errors='ignore')
+              if offset == 0 or size == 0:
+                  continue
+              end = offset + size
+              if end > FLASH_SIZE:
+                  raise SystemExit(f"FAIL: {name} at 0x{offset:X}+0x{size:X}=0x{end:X} exceeds 4MB")
+              print(f"  {name:16s} 0x{offset:06X} + 0x{size:06X} = 0x{end:06X} OK")
+          print("ALL PARTITIONS FIT IN 4MB")
           PY
 
       - uses: actions/upload-artifact@v4
