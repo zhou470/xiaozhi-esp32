@@ -14,6 +14,7 @@ jobs:
         run: |
           . /opt/esp/idf/export.sh || true
           idf.py --version
+
           echo "=== IDF PATH ==="
           echo $IDF_PATH
 
@@ -34,7 +35,7 @@ jobs:
           idf.py set-target esp32c3
           idf.py reconfigure
 
-          echo "=== CHECK PARTITION ==="
+          echo "=== PARTITION TABLE ==="
           idf.py partition-table || true
 
           for f in managed_components/78__xiaozhi-fonts/src/font_emoji_*.c; do
@@ -46,6 +47,26 @@ jobs:
 
           idf.py build
 
+          echo "=== FLASH SAFETY CHECK ==="
+          python3 - << 'PY'
+          import os
+
+          bin_path = "build"
+          total = 0
+
+          for root, _, files in os.walk(bin_path):
+              for f in files:
+                  if f.endswith(".bin"):
+                      size = os.path.getsize(os.path.join(root, f))
+                      print(f, size)
+                      total = max(total, size)
+
+          print("MAX BIN SIZE:", total)
+
+          if total > 3 * 1024 * 1024:
+              raise SystemExit("Firmware too large for safe OTA")
+          PY
+
       - uses: actions/upload-artifact@v4
         with:
           name: firmware
@@ -53,3 +74,5 @@ jobs:
             build/*.bin
             build/*.elf
             build/*.map
+            build/partition_table/*
+            build/flasher_args.json
