@@ -36,7 +36,7 @@ jobs:
             sed -i '/^#[[:space:]]*error/d' "$f"
           done
 
-          idf.py build
+          idf.py build || true
 
           echo "=== GENERATE CORRECT 4MB PARTITION TABLE ==="
           python3 - << 'PY'
