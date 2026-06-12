@@ -75,6 +75,9 @@ std::unique_ptr<Http> Ota::SetupHttp() {
  * Specification: https://ccnphfhqs21z.feishu.cn/wiki/FjW6wZmisimNBBkov6OcmfvknVd
  */
 esp_err_t Ota::CheckVersion() {
+    return ESP_OK;  // ← 加这行，跳过 OTA
+    auto& board = Board::GetInstance();
+    ...
     auto& board = Board::GetInstance();
     auto app_desc = esp_app_get_description();
 
