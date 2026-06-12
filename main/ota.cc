@@ -77,7 +77,26 @@ std::unique_ptr<Http> Ota::SetupHttp() {
 esp_err_t Ota::CheckVersion() {
     return ESP_OK;
 }
-     
+
+void Ota::MarkCurrentVersionValid() {
+    auto partition = esp_ota_get_running_partition();
+    if (strcmp(partition->label, "factory") == 0) {
+        ESP_LOGI(TAG, "Running from factory partition, skipping");
+        return;
+    }
+
+    ESP_LOGI(TAG, "Running partition: %s", partition->label);
+    esp_ota_img_states_t state;
+    if (esp_ota_get_state_partition(partition, &state) != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to get state of partition");
+        return;
+    }
+
+    if (state == ESP_OTA_IMG_PENDING_VERIFY) {
+        ESP_LOGI(TAG, "Marking firmware as valid");
+        esp_ota_mark_app_valid_cancel_rollback();
+    }
+}     
 
 bool Ota::Upgrade(const std::string& firmware_url, std::function<void(int progress, size_t speed)> callback) {
     ESP_LOGI(TAG, "Upgrading firmware from %s", firmware_url.c_str());
