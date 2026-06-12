@@ -313,9 +313,9 @@ void Application::HandleActivationDoneEvent() {
     auto& board = Board::GetInstance();
     board.SetPowerSaveLevel(PowerSaveLevel::LOW_POWER);
 
-    Schedule([this]() {
-        // Play the success sound to indicate the device is ready
+        Schedule([this]() {
         audio_service_.PlaySound(Lang::Sounds::OGG_SUCCESS);
+        ToggleChatState();
     });
 }
 
