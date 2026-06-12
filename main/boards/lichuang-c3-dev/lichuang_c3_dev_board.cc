@@ -61,6 +61,7 @@ public:
         InitializeI2c();
         InitializeSpi();
         InitializeButtons();
+        GetBacklight()->SetBrightness(100);
     }
 
     virtual AudioCodec* GetAudioCodec() override {
