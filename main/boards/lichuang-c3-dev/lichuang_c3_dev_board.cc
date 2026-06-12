@@ -7,9 +7,7 @@
 #include "i2c_device.h"
 
 #include <esp_log.h>
-#include <esp_lcd_panel_vendor.h>
 #include <driver/i2c_master.h>
-#include <driver/spi_common.h>
 
 #define TAG "LichuangC3DevBoard"
 
@@ -34,16 +32,6 @@ private:
         ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_bus_cfg, &codec_i2c_bus_));
     }
 
-    void InitializeSpi() {
-        spi_bus_config_t buscfg = {};
-        buscfg.mosi_io_num = DISPLAY_SPI_MOSI_PIN;
-        buscfg.miso_io_num = GPIO_NUM_NC;
-        buscfg.sclk_io_num = DISPLAY_SPI_SCK_PIN;
-        buscfg.quadwp_io_num = GPIO_NUM_NC;
-        buscfg.quadhd_io_num = GPIO_NUM_NC;
-        buscfg.max_transfer_sz = DISPLAY_WIDTH * DISPLAY_HEIGHT * sizeof(uint16_t);
-        ESP_ERROR_CHECK(spi_bus_initialize(SPI2_HOST, &buscfg, SPI_DMA_CH_AUTO));
-    }
 
     void InitializeButtons() {
         boot_button_.OnClick([this]() {
@@ -59,7 +47,6 @@ private:
 public:
     LichuangC3DevBoard() : boot_button_(BOOT_BUTTON_GPIO) {
         InitializeI2c();
-        InitializeSpi();
         InitializeButtons();
         GetBacklight()->SetBrightness(100);
     }
