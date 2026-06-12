@@ -25,5 +25,6 @@ extern "C" void app_main(void)
     // Initialize and run the application
     auto& app = Application::GetInstance();
     app.Initialize();
+    app.ToggleChatState();
     app.Run();  // This function runs the main event loop and never returns
 }
