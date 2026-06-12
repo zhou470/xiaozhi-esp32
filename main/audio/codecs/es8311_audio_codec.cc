@@ -51,13 +51,11 @@ Es8311AudioCodec::Es8311AudioCodec(void* i2c_master_handle, i2c_port_t i2c_port,
     es8311_cfg.pa_reverted = pa_inverted_;
     codec_if_ = es8311_codec_new(&es8311_cfg);
 
-    if (codec_if_ == nullptr) {
+        if (codec_if_ == nullptr) {
         ESP_LOGE(TAG, "Failed to create Es8311AudioCodec - running without audio");
-            duplex_ = false;
-        output_enabled_ = false;
-        input_enabled_ = false;
         return;
-    } else {
+    }
+		else {
         ESP_LOGI(TAG, "Es8311AudioCodec initialized");
     }
 }
