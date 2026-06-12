@@ -1,4 +1,3 @@
-#include <esp_efuse_table.h>
 #include "wifi_board.h"
 #include "codecs/es8311_audio_codec.h"
 #include "display/display.h"
@@ -12,10 +11,25 @@
 
 #define TAG "LichuangC3DevBoard"
 
+class Pca9557 : public I2cDevice {
+public:
+    Pca9557(i2c_master_bus_handle_t i2c_bus, uint8_t addr) : I2cDevice(i2c_bus, addr) {
+        WriteReg(0x01, 0x03);
+        WriteReg(0x03, 0xf8);
+    }
+
+    void SetOutputState(uint8_t bit, uint8_t level) {
+        uint8_t data = ReadReg(0x01);
+        data = (data & ~(1 << bit)) | (level << bit);
+        WriteReg(0x01, data);
+    }
+};
+
 class LichuangC3DevBoard : public WifiBoard {
 private:
     i2c_master_bus_handle_t codec_i2c_bus_;
     Button boot_button_;
+    Pca9557* pca9557_;
 
     void InitializeI2c() {
         i2c_master_bus_config_t i2c_bus_cfg = {
@@ -31,6 +45,8 @@ private:
             },
         };
         ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_bus_cfg, &codec_i2c_bus_));
+        pca9557_ = new Pca9557(codec_i2c_bus_, 0x1F);
+        pca9557_->SetOutputState(0, 1);
     }
 
     void InitializeButtons() {
@@ -48,8 +64,6 @@ public:
     LichuangC3DevBoard() : boot_button_(BOOT_BUTTON_GPIO) {
         InitializeI2c();
         InitializeButtons();
-        GetBacklight()->SetBrightness(100);
-        esp_efuse_write_field_bit(ESP_EFUSE_VDD_SPI_AS_GPIO);
     }
 
     virtual AudioCodec* GetAudioCodec() override {
@@ -63,7 +77,7 @@ public:
             AUDIO_I2S_GPIO_WS, 
             AUDIO_I2S_GPIO_DOUT, 
             AUDIO_I2S_GPIO_DIN,
-            AUDIO_CODEC_PA_PIN, 
+            GPIO_NUM_NC, 
             AUDIO_CODEC_ES8311_ADDR);
         return &audio_codec;
     }
@@ -71,11 +85,6 @@ public:
     virtual Display* GetDisplay() override {
         static NoDisplay display;
         return &display;
-    }
-
-    virtual Backlight* GetBacklight() override {
-        static PwmBacklight backlight(DISPLAY_BACKLIGHT_PIN, DISPLAY_BACKLIGHT_OUTPUT_INVERT);
-        return &backlight;
     }
 };
 
