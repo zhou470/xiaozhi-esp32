@@ -1,3 +1,4 @@
+#include <esp_efuse_table.h>
 #include "wifi_board.h"
 #include "codecs/es8311_audio_codec.h"
 #include "display/display.h"
@@ -48,6 +49,7 @@ public:
         InitializeI2c();
         InitializeButtons();
         GetBacklight()->SetBrightness(100);
+        esp_efuse_write_field_bit(ESP_EFUSE_VDD_SPI_AS_GPIO);
     }
 
     virtual AudioCodec* GetAudioCodec() override {
