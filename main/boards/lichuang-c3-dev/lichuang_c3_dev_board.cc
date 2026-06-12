@@ -11,25 +11,10 @@
 
 #define TAG "LichuangC3DevBoard"
 
-class Pca9557 : public I2cDevice {
-public:
-    Pca9557(i2c_master_bus_handle_t i2c_bus, uint8_t addr) : I2cDevice(i2c_bus, addr) {
-        WriteReg(0x01, 0x03);
-        WriteReg(0x03, 0xf8);
-    }
-
-    void SetOutputState(uint8_t bit, uint8_t level) {
-        uint8_t data = ReadReg(0x01);
-        data = (data & ~(1 << bit)) | (level << bit);
-        WriteReg(0x01, data);
-    }
-};
-
 class LichuangC3DevBoard : public WifiBoard {
 private:
     i2c_master_bus_handle_t codec_i2c_bus_;
     Button boot_button_;
-    Pca9557* pca9557_;
 
     void InitializeI2c() {
         i2c_master_bus_config_t i2c_bus_cfg = {
@@ -45,8 +30,6 @@ private:
             },
         };
         ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_bus_cfg, &codec_i2c_bus_));
-        pca9557_ = new Pca9557(codec_i2c_bus_, 0x1F);
-        pca9557_->SetOutputState(0, 1);
     }
 
     void InitializeButtons() {
